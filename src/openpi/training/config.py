@@ -248,6 +248,57 @@ class LeRobotAlohaDataConfig(DataConfigFactory):
             action_sequence_keys=self.action_sequence_keys,
         )
 
+@dataclasses.dataclass(frozen=True)
+class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
+    # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
+    # Gripper dimensions will remain in absolute values.
+    use_delta_joint_actions: bool = True
+    # If provided, will be injected into the input data if the "prompt" key is not present.
+    default_prompt: str | None = None
+    # If true, this will convert the joint and gripper values from the standard Aloha space to
+    # the space used by the pi internal runtime which was used to train the base model. People who
+    # use standard Aloha data should set this to true.
+    adapt_to_pi: bool = False # we set it false to make sure
+
+    # Repack transforms.
+    repack_transforms: tyro.conf.Suppress[_transforms.Group] = dataclasses.field(
+        default=_transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "images": {"cam_gopro": "observation.images.gopro", },
+                        "state": "observation.state",
+                        "actions": "action",
+                    }
+                )
+            ]
+        )
+    )
+    # Action keys that will be used to read the action sequence from the dataset.
+    action_sequence_keys: Sequence[str] = ("action",)
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        data_transforms = _transforms.Group(
+            inputs=[aloha_policy.Aloha_Rebar_Inputs(action_dim=model_config.action_dim, adapt_to_pi=self.adapt_to_pi)],
+            outputs=[aloha_policy.Aloha_Rebar_Outputs(adapt_to_pi=self.adapt_to_pi)],
+        )
+        if self.use_delta_joint_actions:
+            delta_action_mask = _transforms.make_bool_mask(6, -1, 6, -1) # len=14
+            data_transforms = data_transforms.push(
+                inputs=[_transforms.DeltaActions(delta_action_mask)],
+                outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+            )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+        ## create a modified copy of an existing dataclass instance (deepcopy)
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs),
+            repack_transforms=self.repack_transforms,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+        )
 
 @dataclasses.dataclass(frozen=True)
 class LeRobotLiberoDataConfig(DataConfigFactory):
@@ -507,6 +558,40 @@ _CONFIGS = [
     #
     # This is a test config that is used to illustate how train on a custom LeRobot dataset.
     # For instuctions on how to convert and train on your own Aloha dataset see examples/aloha_real/README.md
+
+    TrainConfig(
+            name="pi0_act_rebar",
+            model=pi0.Pi0Config(), #  default: action_dim: int = 32
+            data=LeRobotAloha_Rebar_DataConfig(
+                repo_id="1",
+                assets=AssetsConfig(
+                    assets_dir="s3://openpi-assets/checkpoints/pi0_base/assets",
+                    asset_id="trossen",
+                ),
+                repack_transforms=_transforms.Group(
+                        inputs=[
+                            _transforms.RepackTransform(
+                                {
+                                    "images": {
+                                        "gopro_0": "observation.images.gopro_0",
+                                        "webcam_1": "observation.images.webcam_1",
+                                        "webcam_2": "observation.images.webcam_2"
+                                    },
+                                    "state": "observation.state",
+                                    "actions": "action",
+                                }
+                            )
+                        ]
+                    ),
+                default_prompt="insert the rebar into the colored slots",
+                base_config=DataConfig(
+                    local_files_only=True,  # Set to True for local-only datasets.
+                )
+            ),
+            weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+            num_train_steps=20_000,
+        ),
+
     TrainConfig(
         name="pi0_aloha_pen_uncap",
         model=pi0.Pi0Config(),

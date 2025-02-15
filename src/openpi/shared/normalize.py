@@ -60,14 +60,14 @@ class RunningStats:
             if max_changed or min_changed:
                 self._adjust_histograms()
 
-        self._count += num_elements
-
         batch_mean = np.mean(batch, axis=0)
         batch_mean_of_squares = np.mean(batch**2, axis=0)
 
         # Update running mean and mean of squares.
-        self._mean += (batch_mean - self._mean) * (num_elements / self._count)
-        self._mean_of_squares += (batch_mean_of_squares - self._mean_of_squares) * (num_elements / self._count)
+        if not np.isnan(batch_mean).any(): #- skipp the data with nan
+            self._count += num_elements
+            self._mean += (batch_mean - self._mean) * (num_elements / self._count)
+            self._mean_of_squares += (batch_mean_of_squares - self._mean_of_squares) * (num_elements / self._count)
 
         self._update_histograms(batch)
 
