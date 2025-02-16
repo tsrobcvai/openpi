@@ -31,12 +31,17 @@ class ModelType(enum.Enum):
 
 
 # The model always expects these images
+# IMAGE_KEYS = (
+#     "base_0_rgb",
+#     "left_wrist_0_rgb",
+#     "right_wrist_0_rgb",
+# )
+# Act_rebar
 IMAGE_KEYS = (
     "base_0_rgb",
-    "left_wrist_0_rgb",
-    "right_wrist_0_rgb",
+    "webcam_1_rgb",
+    "webcam_2_rgb",
 )
-
 
 # This may need change if we release a small model.
 IMAGE_RESOLUTION = (224, 224)

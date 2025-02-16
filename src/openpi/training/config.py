@@ -560,8 +560,8 @@ _CONFIGS = [
     # For instuctions on how to convert and train on your own Aloha dataset see examples/aloha_real/README.md
 
     TrainConfig(
-            name="pi0_act_rebar",
-            model=pi0.Pi0Config(), #  default: action_dim: int = 32
+            name="pi0_act_rebar_low_mem_finetune",
+            model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
                 repo_id="1",
                 assets=AssetsConfig(
@@ -590,6 +590,10 @@ _CONFIGS = [
             ),
             weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
             num_train_steps=20_000,
+            freeze_filter=pi0.Pi0Config(
+                paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+            ).get_freeze_filter(),
+            ema_decay=None,
         ),
 
     TrainConfig(
