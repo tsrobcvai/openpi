@@ -152,12 +152,12 @@ class Pi0(_model.BaseModel):
                 configs=[paligemma_config, action_expert_config],
                 embed_dtype=config.dtype,
             )
-        )
-        llm.lazy_init(rngs=rngs, method="init")
+        ) #-converting a neural network model to the ONNX format. ONNX (Open Neural Network Exchange) is an open format that allows AI models to be portable across different deep learning frameworks
+        llm.lazy_init(rngs=rngs, method="init") #- delaying parameter creation until needed
         img = nnx_bridge.ToNNX(
             _siglip.Module(
                 num_classes=paligemma_config.width,
-                variant="So400m/14",
+                variant="So400m/14", #- SigLIP: 400M Vision Model
                 pool_type="none",
                 scan=True,
                 dtype_mm=config.dtype,
@@ -175,8 +175,8 @@ class Pi0(_model.BaseModel):
     def embed_prefix(
         self, obs: _model.Observation
     ) -> tuple[at.Float[at.Array, "b s emb"], at.Bool[at.Array, "b s"], at.Bool[at.Array, " s"]]:
-        input_mask = []
-        ar_mask = []
+        input_mask = [] #-input_mask ensures that attention ignores padding
+        ar_mask = [] #-ar_mask controls which tokens can see each other in attention
         tokens = []
         # embed images
         for name in obs.images:
@@ -221,6 +221,8 @@ class Pi0(_model.BaseModel):
 
         # embed timestep using sine-cosine positional encoding with sensitivity in the range [0, 1]
         time_emb = posemb_sincos(timestep, self.action_in_proj.out_features, min_period=4e-3, max_period=4.0)
+        #-Why encode the timestep?
+        #-The model must understand at which step of the diffusion process the current action is taken
         # mix timestep + action information using an MLP
         action_tokens = self.action_in_proj(noisy_actions)
         time_tokens = einops.repeat(time_emb, "b emb -> b s emb", s=self.action_horizon)
@@ -240,7 +242,7 @@ class Pi0(_model.BaseModel):
     @override
     def compute_loss(
         self, rng: at.KeyArrayLike, observation: _model.Observation, actions: _model.Actions, *, train: bool = False
-    ) -> at.Float[at.Array, "*b ah"]:
+    ) -> at.Float[at.Array, "*b ah"]: #-like forward in pytorch
         preprocess_rng, noise_rng, time_rng = jax.random.split(rng, 3)
         observation = _model.preprocess_observation(preprocess_rng, observation, train=train)
 
@@ -252,8 +254,8 @@ class Pi0(_model.BaseModel):
         u_t = noise - actions
 
         # one big forward pass of prefix + suffix at once
-        prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
-        suffix_tokens, suffix_mask, suffix_ar_mask = self.embed_suffix(observation, x_t, time)
+        prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation) #- embedding the input images and language into tokens
+        suffix_tokens, suffix_mask, suffix_ar_mask = self.embed_suffix(observation, x_t, time) #- embedding the input images and language into tokens
         input_mask = jnp.concatenate([prefix_mask, suffix_mask], axis=1)
         ar_mask = jnp.concatenate([prefix_ar_mask, suffix_ar_mask], axis=0)
         attn_mask = make_attn_mask(input_mask, ar_mask)

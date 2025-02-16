@@ -93,13 +93,13 @@ def init_train_state(
 
         # Merge the partial params into the model.
         if partial_params is not None:
-            graphdef, state = nnx.split(model)
+            graphdef, state = nnx.split(model) #-The model's computation graph and The model's parameters (weights)
             # This will produce an error if the partial params are not a subset of the state.
             state.replace_by_pure_dict(partial_params)
             model = nnx.merge(graphdef, state)
 
         params = nnx.state(model)
-        # Convert frozen params to bfloat16.
+        # Convert frozen params to bfloat16. #-reduces memory consumption
         params = nnx_utils.state_map(params, config.freeze_filter, lambda p: p.replace(p.value.astype(jnp.bfloat16)))
 
         return training_utils.TrainState(
@@ -137,7 +137,7 @@ def train_step(
     config: _config.TrainConfig,
     rng: at.KeyArrayLike,
     state: training_utils.TrainState,
-    batch: tuple[_model.Observation, _model.Actions],
+    batch: tuple[_model.Observation, _model.Actions], #-Python’s type hints are only annotations
 ) -> tuple[training_utils.TrainState, dict[str, at.Array]]:
     model = nnx.merge(state.model_def, state.params)
     model.train()
@@ -173,7 +173,7 @@ def train_step(
             ),
         )
 
-    # Filter out params that aren't kernels.
+    # Filter out params that aren't kernels. #- Low-Rank Adaptation
     kernel_params = nnx.state(
         model,
         nnx.All(
@@ -202,9 +202,9 @@ def main(config: _config.TrainConfig):
     jax.config.update("jax_compilation_cache_dir", str(epath.Path("~/.cache/jax").expanduser()))
 
     rng = jax.random.key(config.seed)
-    train_rng, init_rng = jax.random.split(rng)
+    train_rng, init_rng = jax.random.split(rng) # JAX random number generator
 
-    mesh = sharding.make_mesh(config.fsdp_devices)
+    mesh = sharding.make_mesh(config.fsdp_devices) # in Fully Sharded Data Parallel (FSDP) training, define how tensors and computations are partitioned across multiple devices (TPUs/GPUs/CPUs)
     data_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS))
     replicated_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
 
@@ -215,14 +215,14 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
-
+    #TODO: CHECK DATASET of ACT_REBAR
     data_loader = _data_loader.create_data_loader(
         config,
         sharding=data_sharding,
         num_workers=config.num_workers,
         shuffle=True,
     )
-    data_iter = iter(data_loader)
+    data_iter = iter(data_loader) #-Creates an Iterator
     batch = next(data_iter)
     logging.info(f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}")
 
