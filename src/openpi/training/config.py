@@ -572,7 +572,7 @@ _CONFIGS = [
             data=LeRobotAloha_Rebar_DataConfig(
                 repo_id="1",
                 assets=AssetsConfig(
-                    assets_dir="../assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
+                    assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
                     asset_id="1",
                 ),
                 repack_transforms=_transforms.Group(
