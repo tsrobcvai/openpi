@@ -236,6 +236,54 @@ class AbsoluteActions(DataTransformFn):
 
         return data
 
+@dataclasses.dataclass(frozen=True)
+class DeltaActionsStates(DataTransformFn):
+    """Repacks absolute actions and states into delta space."""
+    # Boolean mask for the action dimensions to be repacked into delta action space. Length
+    # can be smaller than the actual number of dimensions. If None, this transform is a no-op.
+    # See `make_bool_mask` for more details.
+    mask_action: Sequence[bool] | None
+    mask_state: Sequence[bool] | None
+
+    def __call__(self, data: DataDict) -> DataDict:
+        if "actions" not in data or self.mask_action is None:
+            return data
+
+        state, actions = data["state"], data["actions"]
+        mask_action = np.asarray(self.mask_action)
+        dims_action = mask_action.shape[-1]
+        actions[..., :dims_action] -= np.expand_dims(np.where(mask_action, state[..., :dims_action], 0), axis=-2)
+        data["actions"] = actions
+
+        mask_state = np.asarray(self.mask_state)
+        dims_state = mask_state.shape[-1]
+        # state[..., :dims_state] -= np.expand_dims(np.where(mask_action, state[..., :dims_state], 0), axis=-2) #- if expected state.shape (n,32)
+        state[:dims_state] -= np.where(mask_state, state[:dims_state], 0) #- if expected state.shape (32,)
+        data["state"] = state
+
+        return data
+
+
+@dataclasses.dataclass(frozen=True)
+class AbsoluteActionsStates(DataTransformFn):
+    """Repacks delta actions and states into absolute space."""
+
+    # Boolean mask for the action dimensions to be repacked into absolute action space. Length
+    # can be smaller than the actual number of dimensions. If None, this transform is a no-op.
+    # See `make_bool_mask` for more details.
+    mask_action: Sequence[bool] | None
+
+    def __call__(self, data: DataDict) -> DataDict:
+        if "actions" not in data or self.mask_action is None:
+            return data
+
+        state, actions = data["state"], data["actions"]
+        mask_action = np.asarray(self.mask_action)
+        dims_action = mask_action.shape[-1]
+        actions[..., :dims_action] += np.expand_dims(np.where(mask_action, state[..., :dims_action], 0), axis=-2)
+        data["actions"] = actions
+
+        return data
 
 @dataclasses.dataclass(frozen=True)
 class TokenizePrompt(DataTransformFn):

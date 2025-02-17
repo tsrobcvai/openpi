@@ -259,7 +259,8 @@ class LeRobotAlohaDataConfig(DataConfigFactory):
 class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
     # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
     # Gripper dimensions will remain in absolute values.
-    use_delta_joint_actions: bool = False
+    use_delta_ee_actions: bool = False
+    use_delta_ee_actions_states: bool = False
     # If provided, will be injected into the input data if the "prompt" key is not present.
     default_prompt: str | None = None
     # If true, this will convert the joint and gripper values from the standard Aloha space to
@@ -290,8 +291,14 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
             inputs=[aloha_policy.Aloha_Rebar_Inputs(action_dim=model_config.action_dim, adapt_to_pi=self.adapt_to_pi)],
             outputs=[aloha_policy.Aloha_Rebar_Outputs(adapt_to_pi=self.adapt_to_pi)],
         )
-        if self.use_delta_joint_actions: #-is equivalent to UMI's relative pose
-            # raise Exception("delta action is not expected")
+        if self.use_delta_ee_actions_states: #-is equivalent to UMI's relative pose
+            delta_action_mask = _transforms.make_bool_mask(6, -1)  # len=7
+            delta_state_mask = _transforms.make_bool_mask(6, -1)  # len=7
+            data_transforms = data_transforms.push(
+                inputs=[_transforms.DeltaActionsStates(delta_action_mask, delta_state_mask)],
+                outputs=[_transforms.AbsoluteActionsStates(delta_action_mask)],
+            )
+        elif self.use_delta_ee_actions: #-vanilla pi0
             delta_action_mask = _transforms.make_bool_mask(6, -1) # len=7
             data_transforms = data_transforms.push(
                 inputs=[_transforms.DeltaActions(delta_action_mask)],
@@ -571,7 +578,7 @@ _CONFIGS = [
             name="pi0_act_rebar_low_mem_finetune",
             model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
-                use_delta_joint_actions=False,
+                use_delta_ee_actions_states=False,
                 repo_id="1",
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
@@ -609,7 +616,8 @@ _CONFIGS = [
             name="pi0_act_rebar_low_mem_finetune_relative",
             model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
-                use_delta_joint_actions=True,
+                use_delta_ee_actions_states=True,
+
                 repo_id="1",
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
