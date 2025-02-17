@@ -590,7 +590,7 @@ _CONFIGS = [
                             )
                         ]
                     ),
-                default_prompt="insert the rebar into the colored slots",
+                default_prompt="Task: insert the rebar into the colored slots. End-effector control in a fixed global reference frame",
                 base_config=DataConfig(
                     local_files_only=True,  # Set to True for local-only datasets.
                 )
