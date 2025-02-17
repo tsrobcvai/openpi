@@ -89,6 +89,8 @@ class DataConfig:
 
     # If true, will disable syncing the dataset from the Hugging Face Hub. Allows training on local-only datasets.
     local_files_only: bool = False
+    #- local dataset path, default is in the local cache
+    root: str | None = None
 
 
 class GroupFactory(Protocol):
@@ -143,6 +145,8 @@ class DataConfigFactory(abc.ABC):
     # Base config that will be updated by the factory.
     base_config: tyro.conf.Suppress[DataConfig | None] = None
 
+    root: str | None = None
+
     @abc.abstractmethod
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         """Create a data config."""
@@ -152,6 +156,7 @@ class DataConfigFactory(abc.ABC):
         asset_id = self.assets.asset_id or repo_id
         return dataclasses.replace(
             self.base_config or DataConfig(),
+            root = self.root,
             repo_id=repo_id,
             asset_id=asset_id,
             norm_stats=self._load_norm_stats(epath.Path(self.assets.assets_dir or assets_dirs), asset_id), #-get norm from the assert path
@@ -267,6 +272,7 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
     # the space used by the pi internal runtime which was used to train the base model. People who
     # use standard Aloha data should set this to true.
     adapt_to_pi: bool = False # we set it false to make sure
+    dataset_root: str | None = None
 
     # Repack transforms.
     repack_transforms: tyro.conf.Suppress[_transforms.Group] = dataclasses.field(
@@ -309,6 +315,7 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
         ## create a modified copy of an existing dataclass instance (deepcopy)
         return dataclasses.replace(
             self.create_base_config(assets_dirs),
+            root = self.dataset_root,
             repack_transforms=self.repack_transforms, #-input types (cams,...)
             data_transforms=data_transforms,
             model_transforms=model_transforms,
@@ -579,6 +586,7 @@ _CONFIGS = [
             model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=False,
+                dataset_root="dataset/lerobot_local",
                 repo_id="1",
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
@@ -617,7 +625,7 @@ _CONFIGS = [
             model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=True,
-
+                dataset_root="dataset/lerobot_local",
                 repo_id="1",
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune_relative", #- norm stats dir

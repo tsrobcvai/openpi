@@ -76,10 +76,25 @@ def create_empty_dataset(
             ],
         }
 
-    if Path(LEROBOT_HOME / repo_id).exists():
-        shutil.rmtree(LEROBOT_HOME / repo_id)
+    # if Path(LEROBOT_HOME / repo_id).exists():
+    #     shutil.rmtree(LEROBOT_HOME / repo_id)
+    # return LeRobotDataset.create(
+    #     repo_id=repo_id,
+    #     fps=10, #-we used 10 hz on Franka
+    #     robot_type=robot_type,
+    #     features=features,
+    #     use_videos=dataset_config.use_videos,
+    #     tolerance_s=dataset_config.tolerance_s,
+    #     image_writer_processes=dataset_config.image_writer_processes,
+    #     image_writer_threads=dataset_config.image_writer_threads,
+    #     video_backend=dataset_config.video_backend,
+    # )
+
+    if Path(Path("dataset/lerobot_local")/repo_id).exists():
+        shutil.rmtree(Path("dataset/lerobot_local")/repo_id)
 
     return LeRobotDataset.create(
+        root = Path(Path("dataset/lerobot_local")/repo_id),
         repo_id=repo_id,
         fps=10, #-we used 10 hz on Franka
         robot_type=robot_type,
