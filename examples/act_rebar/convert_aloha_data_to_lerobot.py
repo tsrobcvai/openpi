@@ -81,7 +81,7 @@ def create_empty_dataset(
 
     return LeRobotDataset.create(
         repo_id=repo_id,
-        fps=10, #-we use 10 hz
+        fps=10, #-we used 10 hz on Franka
         robot_type=robot_type,
         features=features,
         use_videos=dataset_config.use_videos,
@@ -98,14 +98,14 @@ def get_cameras(hdf5_files: list[Path]) -> list[str]:
         return [key for key in ep["/observations/images"].keys() if "depth" not in key]  # noqa: SIM118
 
 
-def load_raw_images_per_camera(ep: h5py.File, cameras: list[str]) -> dict[str, np.ndarray]:
+def load_raw_images_per_camera(ep: h5py.File, cameras: list[str], end_idx: int) -> dict[str, np.ndarray]:
     imgs_per_cam = {}
     for camera in cameras:
         uncompressed = ep[f"/observations/images/{camera}"].ndim == 4
 
         if uncompressed:
             # load all images in RAM
-            imgs_array = ep[f"/observations/images/{camera}"][:]
+            imgs_array = ep[f"/observations/images/{camera}"][:][:end_idx]
         else:
             import cv2
 
@@ -113,7 +113,7 @@ def load_raw_images_per_camera(ep: h5py.File, cameras: list[str]) -> dict[str, n
             imgs_array = []
             for data in ep[f"/observations/images/{camera}"]:
                 imgs_array.append(cv2.cvtColor(cv2.imdecode(data, 1), cv2.COLOR_BGR2RGB))
-            imgs_array = np.array(imgs_array)
+            imgs_array = np.array(imgs_array)[:end_idx]
 
         imgs_per_cam[camera] = imgs_array
     return imgs_per_cam
@@ -124,7 +124,9 @@ def load_raw_episode_data(
 ) -> tuple[dict[str, np.ndarray], torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
     with h5py.File(ep_path, "r") as ep:
         state = torch.from_numpy(ep["/observations/qpos"][:])
-        action = torch.from_numpy(ep["/action"][:])
+        final_valid_idx = torch.where(~torch.isnan(state).any(dim=1))[0][-1]
+        state = state[:final_valid_idx,:]
+        action = torch.from_numpy(ep["/action"][:])[:final_valid_idx,:]
 
         imgs_per_cam = load_raw_images_per_camera(
             ep,
@@ -133,6 +135,7 @@ def load_raw_episode_data(
                 "webcam_1",
                 "webcam_2",
             ],
+            end_idx=final_valid_idx
         )
 
     return imgs_per_cam, state, action

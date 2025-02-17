@@ -290,8 +290,9 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
             inputs=[aloha_policy.Aloha_Rebar_Inputs(action_dim=model_config.action_dim, adapt_to_pi=self.adapt_to_pi)],
             outputs=[aloha_policy.Aloha_Rebar_Outputs(adapt_to_pi=self.adapt_to_pi)],
         )
-        if self.use_delta_joint_actions: #- append abs to delta and delta to abs
-            delta_action_mask = _transforms.make_bool_mask(6, -1, 6, -1) # len=14
+        if self.use_delta_joint_actions: #-is equivalent to UMI's relative pose
+            # raise Exception("delta action is not expected")
+            delta_action_mask = _transforms.make_bool_mask(6, -1) # len=7
             data_transforms = data_transforms.push(
                 inputs=[_transforms.DeltaActions(delta_action_mask)],
                 outputs=[_transforms.AbsoluteActions(delta_action_mask)],
@@ -570,9 +571,48 @@ _CONFIGS = [
             name="pi0_act_rebar_low_mem_finetune",
             model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
+                use_delta_joint_actions=False,
                 repo_id="1",
                 assets=AssetsConfig(
-                    assets_dir="../assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
+                    assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
+                    asset_id="1",
+                ),
+                repack_transforms=_transforms.Group(
+                        inputs=[
+                            _transforms.RepackTransform(
+                                {
+                                    "images": {
+                                        "gopro_0": "observation.images.gopro_0",
+                                        "webcam_1": "observation.images.webcam_1",
+                                        "webcam_2": "observation.images.webcam_2"
+                                    },
+                                    "state": "observation.state",
+                                    "actions": "action",
+                                }
+                            )
+                        ]
+                    ),
+                default_prompt="Task: insert the rebar into the colored slots. End-effector control in a fixed global reference frame",
+                base_config=DataConfig(
+                    local_files_only=True,  # Set to True for local-only datasets.
+                )
+            ),
+            weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+            num_train_steps=20_000,
+            freeze_filter=pi0.Pi0Config(
+                paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+            ).get_freeze_filter(),
+            ema_decay=None,
+        ),
+
+    TrainConfig(
+            name="pi0_act_rebar_low_mem_finetune_relative",
+            model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
+            data=LeRobotAloha_Rebar_DataConfig(
+                use_delta_joint_actions=True,
+                repo_id="1",
+                assets=AssetsConfig(
+                    assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
                     asset_id="1",
                 ),
                 repack_transforms=_transforms.Group(
