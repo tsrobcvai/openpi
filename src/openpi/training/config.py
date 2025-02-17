@@ -111,7 +111,7 @@ class ModelTransformFactory(GroupFactory):
                         _transforms.InjectDefaultPrompt(self.default_prompt),
                         _transforms.ResizeImages(224, 224),
                         _transforms.TokenizePrompt(
-                            _tokenizer.PaligemmaTokenizer(model_config.max_token_len),
+                            _tokenizer.PaligemmaTokenizer(model_config.max_token_len), #- default 48
                         ),
                     ],
                 )
@@ -154,17 +154,24 @@ class DataConfigFactory(abc.ABC):
             self.base_config or DataConfig(),
             repo_id=repo_id,
             asset_id=asset_id,
-            norm_stats=self._load_norm_stats(epath.Path(self.assets.assets_dir or assets_dirs), asset_id),
+            norm_stats=self._load_norm_stats(epath.Path(self.assets.assets_dir or assets_dirs), asset_id), #-get norm from the assert path
         )
 
     def _load_norm_stats(self, assets_dir: epath.Path, asset_id: str | None) -> dict[str, _transforms.NormStats] | None:
         if asset_id is None:
             return None
-        try:
-            data_assets_dir = str(assets_dir / asset_id)
-            norm_stats = _normalize.load(_download.maybe_download(data_assets_dir))
-            logging.info(f"Loaded norm stats from {data_assets_dir}")
-            return norm_stats
+        try: #-HACK: force using a local norm stats
+            try:
+                data_assets_dir = str(assets_dir / asset_id)
+                norm_stats = _normalize.load(_download.maybe_download(data_assets_dir))
+                logging.info(f"Loaded norm stats from {data_assets_dir}")
+                raise NotImplementedError
+                return norm_stats
+            except:#-HACK: force using a local norm stats
+                data_assets_dir = str(assets_dir / asset_id)
+                norm_stats = _normalize.load(data_assets_dir)
+                logging.info(f"Loaded norm stats from {data_assets_dir}")
+                return norm_stats
         except FileNotFoundError:
             logging.info(f"Norm stats not found in {data_assets_dir}, skipping.")
         return None
@@ -252,7 +259,7 @@ class LeRobotAlohaDataConfig(DataConfigFactory):
 class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
     # If true, will convert joint dimensions to deltas with respect to the current state before passing to the model.
     # Gripper dimensions will remain in absolute values.
-    use_delta_joint_actions: bool = True
+    use_delta_joint_actions: bool = False
     # If provided, will be injected into the input data if the "prompt" key is not present.
     default_prompt: str | None = None
     # If true, this will convert the joint and gripper values from the standard Aloha space to
@@ -283,7 +290,7 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
             inputs=[aloha_policy.Aloha_Rebar_Inputs(action_dim=model_config.action_dim, adapt_to_pi=self.adapt_to_pi)],
             outputs=[aloha_policy.Aloha_Rebar_Outputs(adapt_to_pi=self.adapt_to_pi)],
         )
-        if self.use_delta_joint_actions:
+        if self.use_delta_joint_actions: #- append abs to delta and delta to abs
             delta_action_mask = _transforms.make_bool_mask(6, -1, 6, -1) # len=14
             data_transforms = data_transforms.push(
                 inputs=[_transforms.DeltaActions(delta_action_mask)],
@@ -294,10 +301,10 @@ class LeRobotAloha_Rebar_DataConfig(DataConfigFactory):
         ## create a modified copy of an existing dataclass instance (deepcopy)
         return dataclasses.replace(
             self.create_base_config(assets_dirs),
-            repack_transforms=self.repack_transforms,
+            repack_transforms=self.repack_transforms, #-input types (cams,...)
             data_transforms=data_transforms,
             model_transforms=model_transforms,
-            action_sequence_keys=self.action_sequence_keys,
+            action_sequence_keys=self.action_sequence_keys,#-Action keys that will be used to read the action sequence from the dataset.
         )
 
 @dataclasses.dataclass(frozen=True)
@@ -565,8 +572,8 @@ _CONFIGS = [
             data=LeRobotAloha_Rebar_DataConfig(
                 repo_id="1",
                 assets=AssetsConfig(
-                    assets_dir="s3://openpi-assets/checkpoints/pi0_base/assets",
-                    asset_id="trossen",
+                    assets_dir="../assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
+                    asset_id="1",
                 ),
                 repack_transforms=_transforms.Group(
                         inputs=[

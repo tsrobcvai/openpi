@@ -153,7 +153,7 @@ def create_data_loader(
     data_config = config.data.create(config.assets_dirs, config.model)
 
     dataset = create_dataset(data_config, config.model)
-    dataset = transform_dataset(dataset, data_config, skip_norm_stats=skip_norm_stats)
+    dataset = transform_dataset(dataset, data_config, skip_norm_stats=skip_norm_stats) #-add norm in transform
 
     data_loader = TorchDataLoader(
         dataset,

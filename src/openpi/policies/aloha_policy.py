@@ -132,7 +132,7 @@ class Aloha_Rebar_Inputs(transforms.DataTransformFn):
         data = _decode_aloha(data, adapt_to_pi=self.adapt_to_pi)
 
         # Get the state. We are padding from 7 to the model action dim.
-        state = transforms.pad_to_dim(data["state"], self.action_dim) #- self.action_dim default 32
+        state = transforms.pad_to_dim(data["state"], self.action_dim) #- self.action_dim default 32, we set 7 here
 
         in_images = data["images"]
         if set(in_images) - set(self.EXPECTED_CAMERAS):

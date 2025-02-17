@@ -119,7 +119,7 @@ class Normalize(DataTransformFn):
     # If true, will raise an error if any of the keys in the norm stats are not present in the data.
     strict: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self): #-automatically after the __init__ method is executed
         if self.norm_stats is not None and self.use_quantiles:
             _assert_quantile_stats(self.norm_stats)
 
@@ -130,17 +130,17 @@ class Normalize(DataTransformFn):
         return apply_tree(
             data,
             self.norm_stats,
-            self._normalize_quantile if self.use_quantiles else self._normalize,
+            self._normalize_quantile if self.use_quantiles else self._normalize, #-to limit most values within [-1, 1], assuming that x is within [q01, q99]
             strict=self.strict,
         )
 
     def _normalize(self, x, stats: NormStats):
-        return (x - stats.mean) / (stats.std + 1e-6)
+        return (x - stats.mean) / (stats.std + 1e-6) #-Z-score normalization
 
     def _normalize_quantile(self, x, stats: NormStats):
         assert stats.q01 is not None
         assert stats.q99 is not None
-        return (x - stats.q01) / (stats.q99 - stats.q01 + 1e-6) * 2.0 - 1.0
+        return (x - stats.q01) / (stats.q99 - stats.q01 + 1e-6) * 2.0 - 1.0 #-why not use strict [-1,1], since Min-max scaling is highly sensitive to outliers. A single extreme value can “squash” the rest of the data into a very narrow range.
 
 
 @dataclasses.dataclass(frozen=True)
