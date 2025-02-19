@@ -667,7 +667,7 @@ _CONFIGS = [
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=True,
                 dataset_root="dataset/lerobot_local",
-                repo_id="1",
+                repo_id="1", # insert7_small  1
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune_relative", #- norm stats dir
                     asset_id="1",
@@ -687,7 +687,7 @@ _CONFIGS = [
                             )
                         ]
                     ),
-                default_prompt="Task: insert the rebar into the colored slots. End-effector control in a fixed global reference frame",
+                default_prompt="Task: insert the rebar into the colored slots. End-effector control in end-effector reference frame",
                 base_config=DataConfig(
                     local_files_only=True,  # Set to True for local-only datasets.
                 )

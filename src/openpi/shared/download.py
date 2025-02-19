@@ -30,9 +30,9 @@ def get_cache_dir() -> pathlib.Path:
     default_dir = "~/.cache/openpi"
     if os.path.exists("/mnt/weka"):  # noqa: PTH110
         default_dir = f"/mnt/weka/{getpass.getuser()}/.cache/openpi"
-    if os.path.exists("/mnt/sda1/openpi/checkpoints/pretrained"):  # noqa: PTH110
+    if os.path.exists("/mnt/sda1/openpi/checkpoints/pretrained"):  # Rob desktop
         default_dir = f"/mnt/sda1/openpi/checkpoints/pretrained/{getpass.getuser()}/"
-    if os.path.exists("/n/fs/rebar/openpi/checkpoints/pretrained"):  # noqa: PTH110
+    if os.path.exists("/n/fs/rebar/openpi/checkpoints/pretrained"):  # Neuronics
         default_dir = f"/n/fs/rebar/openpi/checkpoints/pretrained/{getpass.getuser()}/"
 
     cache_dir = pathlib.Path(os.getenv(_OPENPI_DATA_HOME, default_dir)).expanduser().resolve()
