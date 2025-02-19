@@ -400,7 +400,7 @@ class TrainConfig:
     # Random seed that will be used by random generators during training.
     seed: int = 42
     # Global batch size.
-    batch_size: int = 32
+    batch_size: int = 32 #-32
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
     num_workers: int = 2
@@ -576,6 +576,47 @@ _CONFIGS = [
         ema_decay=None,
     ),
     #
+
+    # Rebar inference
+    TrainConfig(
+            name="pi0_act_rebar_infer",
+            model=pi0.Pi0Config(), #  default: action_dim: int = 32
+            data=LeRobotAloha_Rebar_DataConfig(
+                use_delta_ee_actions_states=False,
+                dataset_root="dataset/lerobot_local",
+                repo_id="1",
+                assets=AssetsConfig(
+                    assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
+                    asset_id="1",
+                ),
+                repack_transforms=_transforms.Group(
+                        inputs=[
+                            _transforms.RepackTransform(
+                                {
+                                    "images": {
+                                        "gopro_0": "observation.images.gopro_0",
+                                        "webcam_1": "observation.images.webcam_1",
+                                        "webcam_2": "observation.images.webcam_2"
+                                    },
+                                    "state": "observation.state",
+                                    "actions": "action",
+                                }
+                            )
+                        ]
+                    ),
+                default_prompt="Task: insert the rebar into the colored slots. End-effector control in a fixed global reference frame", #default prompt, this will be replaced if set outside before inference
+                base_config=DataConfig(
+                    local_files_only=True,  # Set to True for local-only datasets.
+                )
+            ),
+            weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+            num_train_steps=20_000,
+            freeze_filter=pi0.Pi0Config(
+                paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+            ).get_freeze_filter(),
+            ema_decay=None,
+        ),
+
     # Fine-tuning Aloha configs.
     #
     # This is a test config that is used to illustate how train on a custom LeRobot dataset.

@@ -180,7 +180,7 @@ class Pi0(_model.BaseModel):
         tokens = []
         # embed images
         for name in obs.images:
-            image_tokens, _ = self.PaliGemma.img(obs.images[name], train=False)
+            image_tokens, _ = self.PaliGemma.img(obs.images[name], train=False) #-(1,256,2048)
 
             tokens.append(image_tokens)
             input_mask.append(
@@ -281,10 +281,10 @@ class Pi0(_model.BaseModel):
         dt = -1.0 / num_steps
         batch_size = observation.state.shape[0]
         noise = jax.random.normal(rng, (batch_size, self.action_horizon, self.action_dim))
-
+        # noise = jax.random.normal(rng, (batch_size, 10, self.action_dim))
         # first fill KV cache with a forward pass of the prefix
         prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
-        prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
+        prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)#-function?
         positions = jnp.cumsum(prefix_mask, axis=1) - 1
         _, kv_cache = self.PaliGemma.llm([prefix_tokens, None], mask=prefix_attn_mask, positions=positions)
 
@@ -311,8 +311,8 @@ class Pi0(_model.BaseModel):
             positions = jnp.sum(prefix_mask, axis=-1)[:, None] + jnp.cumsum(suffix_mask, axis=-1) - 1
 
             (prefix_out, suffix_out), _ = self.PaliGemma.llm(
-                [None, suffix_tokens], mask=full_attn_mask, positions=positions, kv_cache=kv_cache
-            )
+                [None, suffix_tokens], mask=full_attn_mask, positions=positions, kv_cache=kv_cache #- the new suffix tokens can attend to that prefix without re-computing everything
+            )#-suffix_out (1, 51, 1024)
             assert prefix_out is None
             v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
 
@@ -323,5 +323,5 @@ class Pi0(_model.BaseModel):
             # robust to floating-point error
             return time >= -dt / 2
 
-        x_0, _ = jax.lax.while_loop(cond, step, (noise, 1.0))
+        x_0, _ = jax.lax.while_loop(cond, step, (noise, 1.0)) #-loop exe step((noise, 1.0))
         return x_0

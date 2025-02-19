@@ -180,7 +180,7 @@ class ResizeImages(DataTransformFn):
     width: int
 
     def __call__(self, data: DataDict) -> DataDict:
-        data["image"] = {k: image_tools.resize_with_pad(v, self.height, self.width) for k, v in data["image"].items()}
+        data["image"] = {k: image_tools.resize_with_pad(v, self.height, self.width) for k, v in data["image"].items()} #-BGR
         return data
 
 
