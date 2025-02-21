@@ -172,3 +172,4 @@ dataset/
 
 conda_env/
 slurm_log/
+assets/
