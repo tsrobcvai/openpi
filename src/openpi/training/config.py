@@ -628,10 +628,10 @@ _CONFIGS = [
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=False,
                 dataset_root="dataset/lerobot_local",
-                repo_id="1",
+                repo_id="insert7_small",
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune", #- norm stats dir
-                    asset_id="1",
+                    asset_id="insert7_small",
                 ),
                 repack_transforms=_transforms.Group(
                         inputs=[
@@ -667,10 +667,10 @@ _CONFIGS = [
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=True,
                 dataset_root="dataset/lerobot_local",
-                repo_id="1", # insert7_small  1
+                repo_id="insert7_small", # insert7_small  1
                 assets=AssetsConfig(
                     assets_dir="assets/pi0_act_rebar_low_mem_finetune_relative", #- norm stats dir
-                    asset_id="1",
+                    asset_id="insert7_small",
                 ),
                 repack_transforms=_transforms.Group(
                         inputs=[

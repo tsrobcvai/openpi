@@ -10,7 +10,7 @@
 #
 # Request 1 task
 #SBATCH --cpus-per-task=8              # Request x CPU cores per task
-#SBATCH --mem=32G                       # Request x GB of memory per task
+#SBATCH --mem=48G                       # Request x GB of memory per task
 #SBATCH --gres=gpu:1                    # Request 1 GPUs per task
 #SBATCH --time=48:00:00                 # Maximum time for each task
 
@@ -31,12 +31,12 @@ export HF_DATASETS_CACHE=/n/fs/rebar/.cache/huggingface/training
 if [ $i_value -eq 0 ]; then
     XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py \
     pi0_act_rebar_low_mem_finetune \
-    --exp-name=act_rebar_finetuning \
+    --exp-name=pi0_lora_insert_small \
     --overwrite
 elif [ $i_value -eq 1 ]; then
     XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py \
     pi0_act_rebar_low_mem_finetune_relative \
-    --exp-name=act_rebar_finetuning_relative \
+    --exp-name=pi0_lora_insert_small_relative \
     --overwrite
 
 else
