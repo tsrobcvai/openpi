@@ -169,3 +169,6 @@ cython_debug/
 
 dataset/
 *.jpg
+
+conda_env/
+slurm_log/
