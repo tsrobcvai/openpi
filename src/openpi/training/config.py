@@ -663,7 +663,7 @@ _CONFIGS = [
 
     TrainConfig(
             name="pi0_act_rebar_low_mem_finetune_relative",
-            model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
+            model=pi0.Pi0Config(action_horizon=10, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"), #  default: action_dim: int = 32
             data=LeRobotAloha_Rebar_DataConfig(
                 use_delta_ee_actions_states=True,
                 dataset_root="dataset/lerobot_local",
