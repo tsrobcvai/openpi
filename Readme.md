@@ -8,8 +8,8 @@ srun --partition=interactive --chdir=/n/fs/rebar/openpi --gres=gpu:1 --cpus-per-
 mkdir dataset
 conda activate /n/fs/rebar/openpi/conda_env/pi0
 export HF_DATASETS_CACHE=".cache/huggingface/datasets"
-uv run examples/act_rebar/convert_aloha_data_to_lerobot.py --raw-dir dataset/insert7_plus --repo-id 1
-uv run scripts/compute_norm_stats.py --config-name pi0_act_rebar_low_mem_finetune
+uv run examples/act_rebar/convert_aloha_data_to_lerobot.py --raw-dir dataset/insert7_small --repo-id insert7_small
+uv run scripts/compute_norm_stats.py --config-name pi0_act_rebar_low_mem_finetune_relative
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi0_act_rebar_low_mem_finetune_relative --exp-name=pi0_rebar_lora_relative --overwrite
 ```
 ## Questions

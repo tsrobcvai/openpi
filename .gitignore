@@ -1,5 +1,5 @@
 # Data directories.
-#assets/
+# assets/
 checkpoints/
 data/
 wandb/
@@ -169,7 +169,7 @@ cython_debug/
 
 dataset/
 *.jpg
-
 conda_env/
 slurm_log/
 assets/
+*.json
